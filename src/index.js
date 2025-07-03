@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
+import cors from 'cors';
 import { init as schedulerInit } from './utils/scheduler.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
@@ -12,6 +13,7 @@ import orderRoutes from './routes/orderRoutes.js';
 dotenv.config();
 connectDB();
 const app = express();
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 // Start scheduler
