@@ -30,16 +30,12 @@ export const createOrder = async (req, res) => {
       }
     } else if (tiffin.type === 'thali') {
       const today = new Date();
-      const slots = slot === 'both' ? ['morning', 'evening'] : [slot];
-
-      for (const s of slots) {
-        orders.push({
-          user: userId,
-          tiffin: tiffinId,
-          deliveryDate: today,
-          slot: s
-        });
-      }
+      orders.push({
+        user: userId,
+        tiffin: tiffinId,
+        deliveryDate: today,
+        slot: ''
+      });
     }
 
     const createdOrders = await Order.insertMany(orders);

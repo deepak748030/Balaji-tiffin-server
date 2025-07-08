@@ -19,7 +19,8 @@ const orderSchema = new mongoose.Schema({
   slot: {
     type: String,
     enum: ['morning', 'evening', 'both'], // ✅ now supports 'both'
-    required: true
+    default: ''
+    // required: true
   },
   delivered: {
     type: Boolean,
