@@ -9,6 +9,7 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import tiffinRoutes from './routes/tiffinRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
 connectDB();
@@ -24,6 +25,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tiffins', tiffinRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/admin', adminRoutes);
+
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const PORT = process.env.PORT || 5000;
