@@ -25,14 +25,7 @@ const TiffinSchema = new mongoose.Schema({
   },
   availableDays: {
     type: [String],
-    enum: allDays,
     default: allDays,
-    validate: {
-      validator: function (v) {
-        return this.type === 'tiffin' || v.length === 0;
-      },
-      message: 'availableDays should only be used if type is tiffin.'
-    }
   }
 }, { timestamps: true });
 
