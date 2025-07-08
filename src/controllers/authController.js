@@ -51,7 +51,23 @@ export const verifyOtp = async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    return sendResponse(res, 200, true, 'OTP verified successfully', { token });
+    // Prepare user data for response
+    const userData = {
+      _id: user._id,
+      phone: user.phone,
+      name: user.name || '',
+      email: user.email || '',
+      address: user.address || '',
+      role: user.role,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    };
+
+    return sendResponse(res, 200, true, 'OTP verified successfully', {
+      token,
+      user: userData
+    });
   } catch (err) {
     return sendResponse(res, 500, false, 'Error verifying OTP', err.message);
   }

@@ -3,7 +3,6 @@ import Wallet from '../models/Wallet.js';
 import Tiffin from '../models/Tiffin.js';
 import { sendResponse } from '../utils/sendResponse.js';
 
-// ✅ Create new orders (subscription logic)
 export const createOrder = async (req, res) => {
   try {
     const { tiffinId, days, slot } = req.body;
@@ -12,7 +11,7 @@ export const createOrder = async (req, res) => {
     const tiffin = await Tiffin.findById(tiffinId);
     if (!tiffin) return sendResponse(res, 404, false, 'Tiffin not found');
 
-    const totalDays = Number(days);
+    const totalDays = Number(days || 1);
     const orders = [];
 
     if (tiffin.type === 'tiffin') {
@@ -21,20 +20,26 @@ export const createOrder = async (req, res) => {
         deliveryDate.setDate(deliveryDate.getDate() + i);
 
         if (slot === 'both') {
-          orders.push({ user: userId, tiffin: tiffinId, deliveryDate, slot: 'morning' });
-          orders.push({ user: userId, tiffin: tiffinId, deliveryDate, slot: 'evening' });
+          orders.push(
+            { user: userId, tiffin: tiffinId, deliveryDate, slot: 'morning' },
+            { user: userId, tiffin: tiffinId, deliveryDate, slot: 'evening' }
+          );
         } else {
           orders.push({ user: userId, tiffin: tiffinId, deliveryDate, slot });
         }
       }
-    } else {
+    } else if (tiffin.type === 'thali') {
       const today = new Date();
-      orders.push({
-        user: userId,
-        tiffin: tiffinId,
-        deliveryDate: today,
-        slot: slot === 'both' ? 'morning' : slot
-      });
+      const slots = slot === 'both' ? ['morning', 'evening'] : [slot];
+
+      for (const s of slots) {
+        orders.push({
+          user: userId,
+          tiffin: tiffinId,
+          deliveryDate: today,
+          slot: s
+        });
+      }
     }
 
     const createdOrders = await Order.insertMany(orders);
@@ -44,7 +49,7 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// ✅ Mark order as delivered and deduct wallet
+
 export const deliverOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -75,7 +80,7 @@ export const deliverOrder = async (req, res) => {
   }
 };
 
-// ✅ Pause order and push 1-day extension
+
 export const pauseOrder = async (req, res) => {
   try {
     const { userId, orderId } = req.body;
@@ -92,9 +97,11 @@ export const pauseOrder = async (req, res) => {
     order.paused = true;
     await order.save();
 
+    // find the last valid (undelivered and unpaused) order of the same tiffin and slot
     const last = await Order.findOne({
       user: userId,
       tiffin: order.tiffin,
+      slot: order.slot,
       delivered: false,
       paused: false
     }).sort({ deliveryDate: -1 });
@@ -115,7 +122,7 @@ export const pauseOrder = async (req, res) => {
   }
 };
 
-// ✅ Get all orders by user
+
 export const getOrdersByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -125,7 +132,7 @@ export const getOrdersByUserId = async (req, res) => {
     }
 
     const orders = await Order.find({ user: userId })
-      .populate('tiffin', 'name price')
+      .populate('tiffin', 'name price type')
       .sort({ deliveryDate: 1 });
 
     if (!orders || orders.length === 0) {

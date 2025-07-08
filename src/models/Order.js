@@ -1,4 +1,5 @@
-﻿import mongoose from 'mongoose';
+﻿// models/Order.js
+import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema({
   user: {
@@ -17,7 +18,7 @@ const orderSchema = new mongoose.Schema({
   },
   slot: {
     type: String,
-    enum: ['morning', 'evening'],
+    enum: ['morning', 'evening', 'both'], // ✅ now supports 'both'
     required: true
   },
   delivered: {
@@ -32,7 +33,6 @@ const orderSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// ✅ Avoid OverwriteModelError in dev
+// ✅ Avoid OverwriteModelError in dev environments
 const Order = mongoose.models.Order || mongoose.model('Order', orderSchema);
-
 export default Order;
