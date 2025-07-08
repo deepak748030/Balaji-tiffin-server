@@ -3,18 +3,34 @@ import Wallet from '../models/Wallet.js';
 import Order from '../models/Order.js';
 import Tiffin from '../models/Tiffin.js';
 import { sendResponse } from '../utils/sendResponse.js';
-import mongoose from 'mongoose';
 
 // ✅ Get all users
 export const getAllUsers = async (req, res) => {
     try {
+        // Fetch users
         const users = await User.find().select('-otp -__v');
-        return sendResponse(res, 200, true, 'Users fetched successfully', users);
+
+        // Fetch wallets
+        const wallets = await Wallet.find();
+        const walletMap = {};
+        wallets.forEach(w => {
+            walletMap[w.user.toString()] = w.balance;
+        });
+
+        // Merge wallet balance into each user
+        const usersWithWallet = users.map(user => {
+            const balance = walletMap[user._id.toString()] || 0;
+            return {
+                ...user.toObject(),
+                walletBalance: balance
+            };
+        });
+
+        return sendResponse(res, 200, true, 'Users with wallet balances fetched successfully', usersWithWallet);
     } catch (err) {
-        return sendResponse(res, 500, false, 'Error fetching users', err.message);
+        return sendResponse(res, 500, false, 'Error fetching users and wallets', err.message);
     }
 };
-
 // ✅ Admin adds balance to any user’s wallet
 export const adminAddBalance = async (req, res) => {
     try {
@@ -55,8 +71,12 @@ export const markOrderDelivered = async (req, res) => {
         const { orderId } = req.params;
 
         const order = await Order.findById(orderId);
-        if (!order || order.delivered) {
+        if (!order || order.status === 'delivered') {
             return sendResponse(res, 400, false, 'Invalid or already delivered order');
+        }
+
+        if (order.status === 'cancelled' || order.status === 'paused') {
+            return sendResponse(res, 400, false, 'Cannot deliver a cancelled or paused order');
         }
 
         const wallet = await Wallet.findOne({ user: order.user });
@@ -67,26 +87,29 @@ export const markOrderDelivered = async (req, res) => {
         }
 
         wallet.balance -= tiffin.price;
-        order.delivered = true;
+        order.status = 'delivered';
         await Promise.all([wallet.save(), order.save()]);
 
-        return sendResponse(res, 200, true, 'Order delivered and wallet updated');
+        return sendResponse(res, 200, true, 'Order delivered and wallet updated', order);
     } catch (err) {
         return sendResponse(res, 500, false, 'Error delivering order', err.message);
     }
 };
 
-// ✅ Cancel order (delete)
+// ✅ Cancel order
 export const cancelOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
-        // Update order status to 'cancelled' without deleting the order
-        const order = await Order.findByIdAndUpdate(
-            orderId,
-            { status: 'cancelled' },
-            { new: true }
-        );
+
+        const order = await Order.findById(orderId);
         if (!order) return sendResponse(res, 404, false, 'Order not found');
+
+        if (order.status !== 'pending') {
+            return sendResponse(res, 400, false, `Cannot cancel an order with status "${order.status}"`);
+        }
+
+        order.status = 'cancelled';
+        await order.save();
 
         return sendResponse(res, 200, true, 'Order cancelled successfully', order);
     } catch (err) {
