@@ -16,19 +16,18 @@ const router = express.Router();
  * @swagger
  * /api/tiffins:
  *   get:
- *     summary: List all tiffins
+ *     summary: Get all tiffins
  *     tags: [Tiffins]
  *     responses:
  *       200:
- *         description: List of tiffins
+ *         description: List of all tiffins
  */
-router.get('/', listTiffins);
 
 /**
  * @swagger
  * /api/tiffins:
  *   post:
- *     summary: Create a new tiffin
+ *     summary: Create a new tiffin or thali
  *     tags: [Tiffins]
  *     security:
  *       - bearerAuth: []
@@ -37,26 +36,45 @@ router.get('/', listTiffins);
  *       content:
  *         multipart/form-data:
  *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 example: "Veg Tiffin"
- *               description:
- *                 type: string
- *                 example: "Delicious vegetarian tiffin"
- *               price:
- *                 type: number
- *                 example: 50
- *               image:
- *                 type: string
- *                 format: binary
+ *             $ref: '#/components/schemas/TiffinInput'
  *     responses:
- *       200:
+ *       201:
  *         description: Tiffin created successfully
- *       401:
- *         description: Unauthorized
+ *       500:
+ *         description: Error while creating
  */
+router.get('/', listTiffins);
 router.post('/', auth, multer.single('image'), createTiffin);
 
 export default router;
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     TiffinInput:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *           example: "Healthy Veg Tiffin"
+ *         description:
+ *           type: string
+ *           example: "A balanced vegetarian meal for lunch"
+ *         price:
+ *           type: number
+ *           example: 100
+ *         type:
+ *           type: string
+ *           enum: [tiffin, thali]
+ *           default: tiffin
+ *         image:
+ *           type: string
+ *           format: binary
+ *         availableSlots:
+ *           type: string
+ *           example: "morning,evening"
+ *         availableDays:
+ *           type: string
+ *           example: "Monday,Tuesday,Wednesday"
+ */

@@ -181,6 +181,6 @@ router.get('/wallet', auth, getWallet);
  *       404:
  *         description: User not found
  */
-router.get('/:userId', auth, getUserById);
+router.get('/:userId', getUserById);
 
 export default router;

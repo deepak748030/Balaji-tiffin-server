@@ -1,49 +1,83 @@
 ﻿import UserModel from '../models/User.js';
 import WalletModel from '../models/Wallet.js';
+import { sendResponse } from '../utils/sendResponse.js';
 
 export const updateProfile = async (req, res) => {
-  const { name, email, address } = req.body;
-  const user = await UserModel.findByIdAndUpdate(req.user.id, { name, email, address }, { new: true });
-  if (!user) return res.status(404).json({ msg: 'User not found' });
-  res.json(user);
+  try {
+    const { name, email, address } = req.body;
+
+    const user = await UserModel.findByIdAndUpdate(
+      req.user.id,
+      { fullName: name, email, address },
+      { new: true }
+    );
+
+    if (!user) return sendResponse(res, 404, false, 'User not found');
+
+    return sendResponse(res, 200, true, 'Profile updated successfully', user);
+  } catch (err) {
+    return sendResponse(res, 500, false, 'Error updating profile', err.message);
+  }
 };
 
 export const topUp = async (req, res) => {
-  const { amount } = req.body;
-  if (!amount || amount <= 0) return res.status(400).json({ msg: 'Invalid amount' });
-  const wallet = await WalletModel.findOne({ user: req.user.id });
-  if (!wallet) return res.status(404).json({ msg: 'Wallet not found' });
-  wallet.balance += Number(amount);
-  await wallet.save();
-  res.json(wallet);
+  try {
+    const { amount } = req.body;
+
+    if (!amount || Number(amount) <= 0) {
+      return sendResponse(res, 400, false, 'Invalid amount');
+    }
+
+    const wallet = await WalletModel.findOne({ user: req.user.id });
+
+    if (!wallet) return sendResponse(res, 404, false, 'Wallet not found');
+
+    wallet.balance += Number(amount);
+    await wallet.save();
+
+    return sendResponse(res, 200, true, 'Wallet topped up successfully', wallet);
+  } catch (err) {
+    return sendResponse(res, 500, false, 'Error topping up wallet', err.message);
+  }
 };
 
 export const getWallet = async (req, res) => {
-  const wallet = await WalletModel.findOne({ user: req.user.id });
-  if (!wallet) return res.status(404).json({ msg: 'Wallet not found' });
-  res.json(wallet);
+  try {
+    const wallet = await WalletModel.findOne({ user: req.user.id });
+
+    if (!wallet) return sendResponse(res, 404, false, 'Wallet not found');
+
+    return sendResponse(res, 200, true, 'Wallet fetched successfully', wallet);
+  } catch (err) {
+    return sendResponse(res, 500, false, 'Error fetching wallet', err.message);
+  }
 };
 
 export const getUserById = async (req, res) => {
-  const { userId } = req.params;
-  if (!userId) return res.status(400).json({ msg: 'userId required' });
+  try {
+    const { userId } = req.params;
 
-  // Ensure authenticated user matches userId or is admin
-  if (req.user.id !== userId && req.user.role !== 'admin') {
-    return res.status(403).json({ msg: 'Unauthorized' });
+    if (!userId) return sendResponse(res, 400, false, 'User ID is required');
+
+    if (req.user.id !== userId && req.user.role !== 'admin') {
+      return sendResponse(res, 403, false, 'Unauthorized');
+    }
+
+    const user = await UserModel.findById(userId).select('-__v');
+
+    if (!user) return sendResponse(res, 404, false, 'User not found');
+
+    return sendResponse(res, 200, true, 'User fetched successfully', {
+      phone: user.phone,
+      name: user.fullName || '',
+      email: user.email || '',
+      address: user.address || '',
+      role: user.role,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    });
+  } catch (err) {
+    return sendResponse(res, 500, false, 'Error fetching user', err.message);
   }
-
-  const user = await UserModel.findById(userId).select('-otp -__v');
-  if (!user) return res.status(404).json({ msg: 'User not found' });
-
-  res.json({
-    phone: user.phone,
-    name: user.name,
-    email: user.email,
-    address: user.address,
-    role: user.role,
-    isVerified: user.isVerified,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  });
 };
