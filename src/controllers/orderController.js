@@ -33,8 +33,7 @@ export const createOrder = async (req, res) => {
       orders.push({
         user: userId,
         tiffin: tiffinId,
-        deliveryDate: today,
-        slot: ''
+        deliveryDate: today
       });
     }
 
