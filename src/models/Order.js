@@ -21,9 +21,10 @@ const orderSchema = new mongoose.Schema({
     enum: ['morning', 'evening', 'both'], // ✅ now supports 'both'
     default: null
   },
-  delivered: {
-    type: Boolean,
-    default: false
+  status: {
+    type: String,
+    enum: ['pending', 'delivered', 'cancelled'], // ✅ Added 'cancelled' status
+    default: 'pending'
   },
   paused: {
     type: Boolean,

@@ -80,13 +80,15 @@ export const markOrderDelivered = async (req, res) => {
 export const cancelOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
-
-        const order = await Order.findById(orderId);
+        // Update order status to 'cancelled' without deleting the order
+        const order = await Order.findByIdAndUpdate(
+            orderId,
+            { status: 'cancelled' },
+            { new: true }
+        );
         if (!order) return sendResponse(res, 404, false, 'Order not found');
 
-        await order.deleteOne();
-
-        return sendResponse(res, 200, true, 'Order cancelled successfully');
+        return sendResponse(res, 200, true, 'Order cancelled successfully', order);
     } catch (err) {
         return sendResponse(res, 500, false, 'Error cancelling order', err.message);
     }

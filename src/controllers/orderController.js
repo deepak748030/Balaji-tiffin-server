@@ -50,7 +50,7 @@ export const deliverOrder = async (req, res) => {
     const { id } = req.params;
 
     const order = await Order.findById(id);
-    if (!order || order.delivered) {
+    if (!order || order.status === 'delivered') {
       return sendResponse(res, 400, false, 'Invalid or already delivered order');
     }
 
@@ -66,7 +66,7 @@ export const deliverOrder = async (req, res) => {
     }
 
     wallet.balance -= tiffin.price;
-    order.delivered = true;
+    order.status = 'delivered';
 
     await Promise.all([wallet.save(), order.save()]);
     return sendResponse(res, 200, true, 'Order delivered and wallet updated');
@@ -86,7 +86,7 @@ export const pauseOrder = async (req, res) => {
 
     const order = await Order.findOne({ _id: orderId, user: userId });
     if (!order) return sendResponse(res, 404, false, 'Order not found');
-    if (order.delivered) return sendResponse(res, 400, false, 'Cannot pause a delivered order');
+    if (order.status === 'delivered') return sendResponse(res, 400, false, 'Cannot pause a delivered order');
     if (order.paused) return sendResponse(res, 200, true, 'Order already paused');
 
     order.paused = true;
@@ -97,7 +97,7 @@ export const pauseOrder = async (req, res) => {
       user: userId,
       tiffin: order.tiffin,
       slot: order.slot,
-      delivered: false,
+      status: 'pending',
       paused: false
     }).sort({ deliveryDate: -1 });
 
@@ -139,3 +139,4 @@ export const getOrdersByUserId = async (req, res) => {
     return sendResponse(res, 500, false, 'Error fetching orders', error.message);
   }
 };
+

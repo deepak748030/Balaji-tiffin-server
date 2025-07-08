@@ -20,6 +20,6 @@ router.get('/users', getAllUsers); // ✅ Get all users
 router.post('/wallet/top-up', adminAddBalance); // ✅ Admin adds balance to user's wallet
 router.get('/orders', getAllOrders); // ✅ Get all orders with user + tiffin
 router.put('/orders/:orderId/deliver', markOrderDelivered); // ✅ Mark delivered
-router.delete('/orders/:orderId', cancelOrder); // ✅ Cancel order
+router.patch('/orders/:orderId', cancelOrder); // ✅ Cancel order
 
 export default router;
