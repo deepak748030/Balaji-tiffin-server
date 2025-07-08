@@ -6,6 +6,7 @@ export const createTiffin = async (req, res) => {
     const { name, description, price, type, availableSlots, availableDays } = req.body;
     const image = req.file?.path;
 
+    // Prepare tiffinData based on type
     const tiffinData = {
       name,
       type: type || 'tiffin',
@@ -14,9 +15,24 @@ export const createTiffin = async (req, res) => {
       image,
     };
 
-    if (type === 'tiffin') {
-      tiffinData.availableSlots = availableSlots ? availableSlots.split(',') : undefined;
-      tiffinData.availableDays = availableDays ? availableDays.split(',') : undefined;
+    if (tiffinData.type === 'tiffin') {
+      tiffinData.availableSlots = availableSlots
+        ? availableSlots.split(',').map(s => s.trim())
+        : ['morning', 'evening'];
+      tiffinData.availableDays = availableDays
+        ? availableDays.split(',').map(d => d.trim())
+        : [
+          'Sunday',
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday'
+        ];
+    } else if (tiffinData.type === 'thali') {
+      tiffinData.availableSlots = [];
+      tiffinData.availableDays = [];
     }
 
     const tiffin = await TiffinModel.create(tiffinData);
