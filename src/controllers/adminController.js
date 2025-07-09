@@ -4,25 +4,23 @@ import Order from '../models/Order.js';
 import Tiffin from '../models/Tiffin.js';
 import { sendResponse } from '../utils/sendResponse.js';
 
-// ✅ Get all users
 export const getAllUsers = async (req, res) => {
     try {
         // Fetch users
         const users = await User.find().select('-otp -__v');
 
-        // Fetch wallets
+        // Fetch wallets and map by userId string
         const wallets = await Wallet.find();
-        const walletMap = {};
+        const walletMap = new Map();
         wallets.forEach(w => {
-            walletMap[w.user.toString()] = w.balance;
+            walletMap.set(w.user.toString(), w.balance);
         });
 
-        // Merge wallet balance into each user
+        // Merge wallet balance into each user object
         const usersWithWallet = users.map(user => {
-            const balance = walletMap[user._id.toString()] || 0;
             return {
                 ...user.toObject(),
-                walletBalance: balance
+                walletBalance: walletMap.get(user._id.toString()) || 0
             };
         });
 
@@ -31,6 +29,7 @@ export const getAllUsers = async (req, res) => {
         return sendResponse(res, 500, false, 'Error fetching users and wallets', err.message);
     }
 };
+
 // ✅ Admin adds balance to any user’s wallet
 export const adminAddBalance = async (req, res) => {
     try {
