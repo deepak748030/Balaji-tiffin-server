@@ -12,7 +12,7 @@ import {
 const router = express.Router();
 
 // 🔒 All admin routes must be protected and admin-only
-// router.use(auth, isAdmin);
+router.use(auth, isAdmin);
 
 router.get('/users', getAllUsers); // ✅ Get all users with wallet balance
 

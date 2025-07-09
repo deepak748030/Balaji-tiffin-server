@@ -34,14 +34,26 @@ export const getAllUsers = async (req, res) => {
 export const adminAddBalance = async (req, res) => {
     try {
         const { userId, amount } = req.body;
-        if (!userId || !amount || Number(amount) <= 0) {
+
+        // ✅ Validate inputs
+        if (!userId || isNaN(amount) || Number(amount) <= 0) {
             return sendResponse(res, 400, false, 'Invalid input');
         }
 
-        const wallet = await Wallet.findOne({ user: userId });
-        if (!wallet) return sendResponse(res, 404, false, 'Wallet not found');
+        // ✅ Find or create wallet
+        let wallet = await Wallet.findOne({ user: userId });
 
-        wallet.balance += Number(amount);
+        if (!wallet) {
+            // Create new wallet if not found
+            wallet = new Wallet({
+                user: userId,
+                balance: Number(amount)
+            });
+        } else {
+            // Update existing balance
+            wallet.balance += Number(amount);
+        }
+
         await wallet.save();
 
         return sendResponse(res, 200, true, 'Balance added successfully', wallet);
@@ -49,6 +61,7 @@ export const adminAddBalance = async (req, res) => {
         return sendResponse(res, 500, false, 'Error adding balance', err.message);
     }
 };
+
 
 // ✅ Get all orders with user & tiffin info
 export const getAllOrders = async (req, res) => {
@@ -70,30 +83,44 @@ export const markOrderDelivered = async (req, res) => {
         const { orderId } = req.params;
 
         const order = await Order.findById(orderId);
-        if (!order || order.status === 'delivered') {
-            return sendResponse(res, 400, false, 'Invalid or already delivered order');
+        if (!order) {
+            return sendResponse(res, 404, false, 'Order not found');
+        }
+
+        if (order.status === 'delivered') {
+            return sendResponse(res, 400, false, 'Order already delivered');
         }
 
         if (order.status === 'cancelled' || order.status === 'paused') {
             return sendResponse(res, 400, false, 'Cannot deliver a cancelled or paused order');
         }
 
-        const wallet = await Wallet.findOne({ user: order.user });
         const tiffin = await Tiffin.findById(order.tiffin);
-
-        if (!wallet || wallet.balance < tiffin.price) {
-            return sendResponse(res, 400, false, 'Insufficient balance in wallet');
+        if (!tiffin) {
+            return sendResponse(res, 404, false, 'Tiffin not found');
         }
 
+        const wallet = await Wallet.findOne({ user: order.user });
+        if (!wallet) {
+            return sendResponse(res, 404, false, 'Wallet not found');
+        }
+
+        if (wallet.balance < tiffin.price) {
+            return sendResponse(res, 400, false, `Insufficient balance. ₹${tiffin.price} required, but you have ₹${wallet.balance}`);
+        }
+
+        // ✅ Deduct only the amount of this single tiffin
         wallet.balance -= tiffin.price;
         order.status = 'delivered';
+
         await Promise.all([wallet.save(), order.save()]);
 
-        return sendResponse(res, 200, true, 'Order delivered and wallet updated', order);
+        return sendResponse(res, 200, true, 'Order marked as delivered, wallet updated', order);
     } catch (err) {
         return sendResponse(res, 500, false, 'Error delivering order', err.message);
     }
 };
+
 
 // ✅ Cancel order
 export const cancelOrder = async (req, res) => {

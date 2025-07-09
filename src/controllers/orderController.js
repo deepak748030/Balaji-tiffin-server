@@ -11,8 +11,13 @@ export const createOrder = async (req, res) => {
     const tiffin = await Tiffin.findById(tiffinId);
     if (!tiffin) return sendResponse(res, 404, false, 'Tiffin not found');
 
+    const wallet = await Wallet.findOne({ user: userId });
+    if (!wallet) return sendResponse(res, 404, false, 'Wallet not found');
+
     const totalDays = Number(days || 1);
     const orders = [];
+
+    let estimatedOrderCount = 0;
 
     if (tiffin.type === 'tiffin') {
       for (let i = 0; i < totalDays; i++) {
@@ -20,15 +25,18 @@ export const createOrder = async (req, res) => {
         deliveryDate.setDate(deliveryDate.getDate() + i);
 
         if (slot === 'both') {
+          estimatedOrderCount += 2;
           orders.push(
             { user: userId, tiffin: tiffinId, deliveryDate, slot: 'morning' },
             { user: userId, tiffin: tiffinId, deliveryDate, slot: 'evening' }
           );
         } else {
+          estimatedOrderCount += 1;
           orders.push({ user: userId, tiffin: tiffinId, deliveryDate, slot });
         }
       }
     } else if (tiffin.type === 'thali') {
+      estimatedOrderCount = 1;
       const today = new Date();
       orders.push({
         user: userId,
@@ -37,12 +45,20 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const totalCost = estimatedOrderCount * tiffin.price;
+
+    // ✅ Only check wallet balance, don't deduct
+    if (wallet.balance < totalCost) {
+      return sendResponse(res, 400, false, `Insufficient wallet balance. Need ₹${totalCost}, but you have ₹${wallet.balance}`);
+    }
+
     const createdOrders = await Order.insertMany(orders);
     return sendResponse(res, 201, true, 'Order(s) created successfully', createdOrders);
   } catch (error) {
     return sendResponse(res, 500, false, 'Error creating order(s)', error.message);
   }
 };
+
 
 
 export const deliverOrder = async (req, res) => {
