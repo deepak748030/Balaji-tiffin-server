@@ -1,5 +1,7 @@
 ﻿import express from 'express';
 import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
 import connectDB from './config/db.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
@@ -16,6 +18,11 @@ connectDB();
 const app = express();
 app.use(cors({ origin: "*" }));
 app.use(express.json());
+
+// ✅ Make uploads folder accessible
+const uploadPath = path.join(path.resolve(), 'uploads');
+if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath);
+app.use('/uploads', express.static(uploadPath));
 
 // Start scheduler
 schedulerInit();
