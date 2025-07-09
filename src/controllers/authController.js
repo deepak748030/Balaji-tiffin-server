@@ -1,7 +1,8 @@
-﻿import User from '../models/User.js';
+﻿import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
 import Wallet from '../models/Wallet.js';
-import jwt from 'jsonwebtoken';
 import { sendResponse } from '../utils/sendResponse.js';
+import { sendOtpViaSMS, generateOtp } from '../utils/otpService.js'; // ✅ using renamed helper
 
 export const sendOtp = async (req, res) => {
   try {
@@ -18,17 +19,26 @@ export const sendOtp = async (req, res) => {
       await new Wallet({ user: user._id }).save();
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = generateOtp();
     user.otp = otp;
     await user.save();
 
-    console.log(`OTP for ${phone}: ${otp}`); // Replace with SMS in production
+    // ✅ Send via external SMS service
+    const smsResponse = await sendOtpViaSMS(phone, otp);
+
+    if (!smsResponse.status) {
+      return sendResponse(res, 500, false, 'OTP sending failed via SMS API');
+    }
+
+    // Optional: remove this in production
+    console.log(`OTP for ${phone}: ${otp}`);
 
     return sendResponse(res, 200, true, 'OTP sent successfully');
   } catch (err) {
     return sendResponse(res, 500, false, 'Error sending OTP', err.message);
   }
 };
+
 
 export const verifyOtp = async (req, res) => {
   try {

@@ -76,34 +76,49 @@ export const deliverOrder = async (req, res) => {
 };
 
 
+
 export const pauseOrder = async (req, res) => {
   try {
     const { userId, orderId } = req.body;
 
+    // Allow pause if requester is the user or an admin
     if (req.user.id !== userId && req.user.role !== 'admin') {
       return sendResponse(res, 403, false, 'Unauthorized');
     }
 
+    // Find the order by its id and the owner
     const order = await Order.findOne({ _id: orderId, user: userId });
-    if (!order) return sendResponse(res, 404, false, 'Order not found');
-    if (order.status === 'delivered') return sendResponse(res, 400, false, 'Cannot pause a delivered order');
-    if (order.paused) return sendResponse(res, 200, true, 'Order already paused');
+    if (!order) {
+      return sendResponse(res, 404, false, 'Order not found');
+    }
 
-    order.paused = true;
+    // Cannot pause an order that is delivered or cancelled
+    if (order.status === 'delivered' || order.status === 'cancelled') {
+      return sendResponse(res, 400, false, 'Cannot pause a delivered or cancelled order');
+    }
+
+    // If order is already paused, simply return a message
+    if (order.status === 'paused') {
+      return sendResponse(res, 200, true, 'Order already paused');
+    }
+
+    // Mark the current order as paused
+    order.status = 'paused';
     await order.save();
 
-    // find the last valid (undelivered and unpaused) order of the same tiffin and slot
-    const last = await Order.findOne({
+    // Find the last pending order for the same tiffin and slot (if any)
+    const lastPendingOrder = await Order.findOne({
       user: userId,
       tiffin: order.tiffin,
       slot: order.slot,
-      status: 'pending',
-      paused: false
+      status: 'pending'
     }).sort({ deliveryDate: -1 });
 
-    const newDate = new Date(last?.deliveryDate || new Date());
+    // Determine the new delivery date (extend by 1 day from the last order, or use today if not found)
+    const newDate = new Date(lastPendingOrder ? lastPendingOrder.deliveryDate : new Date());
     newDate.setDate(newDate.getDate() + 1);
 
+    // Create a new order for the extended day (status defaults to 'pending')
     const newOrder = await Order.create({
       user: userId,
       tiffin: order.tiffin,
