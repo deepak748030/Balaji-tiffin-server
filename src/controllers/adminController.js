@@ -67,8 +67,8 @@ export const adminAddBalance = async (req, res) => {
 export const getAllOrders = async (req, res) => {
     try {
         const orders = await Order.find()
-            .populate('user', 'fullName phone')
-            .populate('tiffin', 'name price')
+            .populate('user', 'name phone address')
+            .populate('tiffin', 'name price type')
             .sort({ createdAt: -1 });
 
         return sendResponse(res, 200, true, 'Orders fetched successfully', orders);
@@ -76,6 +76,7 @@ export const getAllOrders = async (req, res) => {
         return sendResponse(res, 500, false, 'Error fetching orders', err.message);
     }
 };
+
 
 // ✅ Mark an order as delivered
 export const markOrderDelivered = async (req, res) => {
