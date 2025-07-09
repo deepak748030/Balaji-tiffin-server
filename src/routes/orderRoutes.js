@@ -1,6 +1,6 @@
 ﻿import express from 'express';
 import auth from '../middleware/auth.js';
-import { createOrder, deliverOrder, pauseOrder, getOrdersByUserId } from '../controllers/orderController.js';
+import { createOrder, deliverOrder, pauseOrder, getOrdersByUserId, cancelOrder } from '../controllers/orderController.js';
 
 const router = express.Router();
 
@@ -210,5 +210,45 @@ router.put('/pause', auth, pauseOrder);
  *         description: No orders found for this user
  */
 router.get('/user/:userId', auth, getOrdersByUserId);
+
+
+/**
+ * @swagger
+ * /api/orders/{id}/cancel:
+ *   put:
+ *     summary: Cancel an order
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the order to cancel
+ *     responses:
+ *       200:
+ *         description: Order cancelled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Order cancelled successfully"
+ *       400:
+ *         description: Cannot cancel delivered/cancelled order
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Not the order owner
+ *       404:
+ *         description: Order not found
+ */
+router.put('/:id/cancel', auth, cancelOrder);
+
+
 
 export default router;

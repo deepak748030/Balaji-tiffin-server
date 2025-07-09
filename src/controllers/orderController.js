@@ -155,3 +155,32 @@ export const getOrdersByUserId = async (req, res) => {
   }
 };
 
+
+
+export const cancelOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return sendResponse(res, 404, false, 'Order not found');
+    }
+
+    // Only the owner or an admin can cancel the order
+    if (req.user.id !== order.user.toString() && req.user.role !== 'admin') {
+      return sendResponse(res, 403, false, 'Unauthorized');
+    }
+
+    // Cannot cancel already delivered or cancelled order
+    if (order.status === 'delivered' || order.status === 'cancelled') {
+      return sendResponse(res, 400, false, 'Order already delivered or cancelled');
+    }
+
+    order.status = 'cancelled';
+    await order.save();
+
+    return sendResponse(res, 200, true, 'Order cancelled successfully', order);
+  } catch (error) {
+    return sendResponse(res, 500, false, 'Error cancelling order', error.message);
+  }
+};
