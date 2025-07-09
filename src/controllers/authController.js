@@ -4,6 +4,43 @@ import Wallet from '../models/Wallet.js';
 import { sendResponse } from '../utils/sendResponse.js';
 import { sendOtpViaSMS, generateOtp } from '../utils/otpService.js'; // ✅ using renamed helper
 
+// export const sendOtp = async (req, res) => {
+//   try {
+//     const { phone } = req.body;
+
+//     if (!phone) {
+//       return sendResponse(res, 400, false, 'Phone number is required');
+//     }
+
+//     let user = await User.findOne({ phone });
+//     if (!user) {
+//       user = new User({ phone });
+//       await user.save();
+//       await new Wallet({ user: user._id }).save();
+//     }
+
+//     const otp = generateOtp();
+//     user.otp = otp;
+//     await user.save();
+
+//     // ✅ Send via external SMS service
+//     const smsResponse = await sendOtpViaSMS(phone, otp);
+
+//     if (!smsResponse.status) {
+//       return sendResponse(res, 500, false, 'OTP sending failed via SMS API');
+//     }
+
+//     // Optional: remove this in production
+//     console.log(`OTP for ${phone}: ${otp}`);
+
+//     return sendResponse(res, 200, true, 'OTP sent successfully');
+//   } catch (err) {
+//     return sendResponse(res, 500, false, 'Error sending OTP', err.message);
+//   }
+// };
+
+
+
 export const sendOtp = async (req, res) => {
   try {
     const { phone } = req.body;
@@ -19,18 +56,12 @@ export const sendOtp = async (req, res) => {
       await new Wallet({ user: user._id }).save();
     }
 
-    const otp = generateOtp();
+    // ✅ Always use static OTP
+    const otp = '111111';
     user.otp = otp;
     await user.save();
 
-    // ✅ Send via external SMS service
-    const smsResponse = await sendOtpViaSMS(phone, otp);
-
-    if (!smsResponse.status) {
-      return sendResponse(res, 500, false, 'OTP sending failed via SMS API');
-    }
-
-    // Optional: remove this in production
+    // ✅ No external SMS sent — only log for development
     console.log(`OTP for ${phone}: ${otp}`);
 
     return sendResponse(res, 200, true, 'OTP sent successfully');
