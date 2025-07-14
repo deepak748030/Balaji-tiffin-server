@@ -6,13 +6,15 @@ import {
     adminAddBalance,
     getAllOrders,
     markOrderDelivered,
-    cancelOrder
+    cancelOrder,
+    toggleIsRegular,
+    adminCreateUser
 } from '../controllers/adminController.js';
 
 const router = express.Router();
 
 // 🔒 All admin routes must be protected and admin-only
-// router.use(auth, isAdmin);
+router.use(auth, isAdmin);
 
 router.get('/users', getAllUsers); // ✅ Get all users with wallet balance
 
@@ -23,5 +25,11 @@ router.get('/orders', getAllOrders); // ✅ Get all orders (with user & tiffin i
 router.patch('/orders/:orderId/deliver', markOrderDelivered); // ✅ PATCH used for marking delivered
 
 router.patch('/orders/:orderId/cancel', cancelOrder); // ✅ PATCH used for cancel order
+
+// Admin creates a user manually
+router.post('/users', adminCreateUser);
+
+// Admin toggles isRegular flag
+router.patch('/users/:userId/toggle-regular', toggleIsRegular);
 
 export default router;

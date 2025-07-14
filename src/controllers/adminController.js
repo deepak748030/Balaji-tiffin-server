@@ -143,3 +143,53 @@ export const cancelOrder = async (req, res) => {
         return sendResponse(res, 500, false, 'Error cancelling order', err.message);
     }
 };
+
+// ✅ Admin manually creates user (and wallet)
+export const adminCreateUser = async (req, res) => {
+    try {
+        const { phone, name, email, address, pincode, isRegular, role } = req.body;
+
+        if (!phone) {
+            return sendResponse(res, 400, false, 'Phone number is required');
+        }
+
+        const existing = await User.findOne({ phone });
+        if (existing) {
+            return sendResponse(res, 400, false, 'User with this phone already exists');
+        }
+
+        const user = await User.create({
+            phone,
+            name,
+            email,
+            address,
+            pincode,
+            isRegular: !!isRegular,
+            role: role === 'admin' ? 'admin' : 'user'
+
+        });
+
+        // 🔄 Create wallet
+        await Wallet.create({ user: user._id });
+
+        return sendResponse(res, 201, true, 'User created successfully', user);
+    } catch (err) {
+        return sendResponse(res, 500, false, 'Error creating user', err.message);
+    }
+};
+
+export const toggleIsRegular = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        const user = await User.findById(userId);
+        if (!user) return sendResponse(res, 404, false, 'User not found');
+
+        user.isRegular = !user.isRegular;
+        await user.save();
+
+        return sendResponse(res, 200, true, `User isRegular updated to ${user.isRegular}`, user);
+    } catch (err) {
+        return sendResponse(res, 500, false, 'Error toggling isRegular', err.message);
+    }
+};

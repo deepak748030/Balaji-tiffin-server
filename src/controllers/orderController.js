@@ -2,6 +2,8 @@
 import Wallet from '../models/Wallet.js';
 import Tiffin from '../models/Tiffin.js';
 import { sendResponse } from '../utils/sendResponse.js';
+import Transaction from '../models/Transaction.js';
+import User from '../models/User.js';
 
 export const createOrder = async (req, res) => {
   try {
@@ -11,12 +13,14 @@ export const createOrder = async (req, res) => {
     const tiffin = await Tiffin.findById(tiffinId);
     if (!tiffin) return sendResponse(res, 404, false, 'Tiffin not found');
 
+    const user = await User.findById(userId);
+    if (!user) return sendResponse(res, 404, false, 'User not found');
+
     const wallet = await Wallet.findOne({ user: userId });
     if (!wallet) return sendResponse(res, 404, false, 'Wallet not found');
 
     const totalDays = Number(days || 1);
     const orders = [];
-
     let estimatedOrderCount = 0;
 
     if (tiffin.type === 'tiffin') {
@@ -47,8 +51,8 @@ export const createOrder = async (req, res) => {
 
     const totalCost = estimatedOrderCount * tiffin.price;
 
-    // ✅ Only check wallet balance, don't deduct
-    if (wallet.balance < totalCost) {
+    // ✅ Allow isRegular users to skip balance check
+    if (!user.isRegular && wallet.balance < totalCost) {
       return sendResponse(res, 400, false, `Insufficient wallet balance. Need ₹${totalCost}, but you have ₹${wallet.balance}`);
     }
 
@@ -58,6 +62,7 @@ export const createOrder = async (req, res) => {
     return sendResponse(res, 500, false, 'Error creating order(s)', error.message);
   }
 };
+
 
 
 
@@ -74,18 +79,36 @@ export const deliverOrder = async (req, res) => {
       return sendResponse(res, 403, false, 'Only admin can deliver orders');
     }
 
-    const wallet = await Wallet.findOne({ user: order.user });
-    const tiffin = await Tiffin.findById(order.tiffin);
+    const [wallet, tiffin, user] = await Promise.all([
+      Wallet.findOne({ user: order.user }),
+      Tiffin.findById(order.tiffin),
+      User.findById(order.user)
+    ]);
 
-    if (!wallet || wallet.balance < tiffin.price) {
+    if (!wallet || !tiffin || !user) {
+      return sendResponse(res, 404, false, 'Wallet, Tiffin, or User not found');
+    }
+
+    // ✅ Only allow negative balance if isRegular
+    if (!user.isRegular && wallet.balance < tiffin.price) {
       return sendResponse(res, 400, false, 'Insufficient balance in wallet');
     }
 
+    // ✅ Deduct price (can go negative if isRegular)
     wallet.balance -= tiffin.price;
     order.status = 'delivered';
 
     await Promise.all([wallet.save(), order.save()]);
-    return sendResponse(res, 200, true, 'Order delivered and wallet updated');
+
+    // ✅ Log transaction
+    await Transaction.create({
+      user: user._id,
+      amount: tiffin.price,
+      type: 'deduct',
+      message: `Tiffin delivered on ${order.deliveryDate.toDateString()} (${order.slot || 'default'})`
+    });
+
+    return sendResponse(res, 200, true, 'Order delivered, wallet deducted, transaction recorded');
   } catch (error) {
     return sendResponse(res, 500, false, 'Error delivering order', error.message);
   }
