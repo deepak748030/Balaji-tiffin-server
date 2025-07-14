@@ -33,8 +33,8 @@ router.post('/users', adminCreateUser);
 // Admin toggles isRegular flag
 router.patch('/users/:userId/toggle-regular', toggleIsRegular);
 
-router.post('/', createPincode);       // POST /api/pincodes
-router.get('/', listPincodes);               // GET  /api/pincodes
-router.delete('/:id', deletePincode);  // DELETE /api/pincodes/:id
+router.post('/pincode/', createPincode);       // POST /api/pincodes
+router.get('/pincode/', listPincodes);               // GET  /api/pincodes
+router.delete('/pincode/:id', deletePincode);  // DELETE /api/pincodes/:id
 
 export default router;
