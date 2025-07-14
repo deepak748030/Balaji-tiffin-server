@@ -10,6 +10,7 @@ import {
     toggleIsRegular,
     adminCreateUser
 } from '../controllers/adminController.js';
+import { createPincode, deletePincode, listPincodes } from '../controllers/pincodeController.js';
 
 const router = express.Router();
 
@@ -31,5 +32,9 @@ router.post('/users', adminCreateUser);
 
 // Admin toggles isRegular flag
 router.patch('/users/:userId/toggle-regular', toggleIsRegular);
+
+router.post('/', createPincode);       // POST /api/pincodes
+router.get('/', listPincodes);               // GET  /api/pincodes
+router.delete('/:id', deletePincode);  // DELETE /api/pincodes/:id
 
 export default router;

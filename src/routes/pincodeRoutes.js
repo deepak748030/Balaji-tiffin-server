@@ -4,8 +4,6 @@ import auth from '../middleware/auth.js'; // Optional — use if you want only l
 
 const router = express.Router();
 
-router.post('/', auth, createPincode);       // POST /api/pincodes
-router.get('/', listPincodes);               // GET  /api/pincodes
-router.delete('/:id', auth, deletePincode);  // DELETE /api/pincodes/:id
+
 
 export default router;
