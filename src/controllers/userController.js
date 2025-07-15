@@ -4,11 +4,11 @@ import { sendResponse } from '../utils/sendResponse.js';
 
 export const updateProfile = async (req, res) => {
   try {
-    const { name, email, address } = req.body;
+    const { name, email, address, pincode } = req.body;
 
     const user = await UserModel.findByIdAndUpdate(
       req.user.id,
-      { fullName: name, email, address },
+      { name, email, address, pincode },
       { new: true }
     );
 
@@ -19,6 +19,7 @@ export const updateProfile = async (req, res) => {
     return sendResponse(res, 500, false, 'Error updating profile', err.message);
   }
 };
+
 
 export const topUp = async (req, res) => {
   try {
