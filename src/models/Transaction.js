@@ -12,7 +12,7 @@ const transactionSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['add', 'deduct'],
+        enum: ['add', 'deduct', 'credit', 'cancel'],
         required: true
     },
     message: {

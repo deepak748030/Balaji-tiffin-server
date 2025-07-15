@@ -4,6 +4,7 @@ import Order from '../models/Order.js';
 import Tiffin from '../models/Tiffin.js';
 import { sendResponse } from '../utils/sendResponse.js';
 import AdminSettings from '../models/AdminSettings.js';
+import Transaction from '../models/Transaction.js';
 
 export const getAllUsers = async (req, res) => {
     try {
@@ -57,6 +58,14 @@ export const adminAddBalance = async (req, res) => {
 
         await wallet.save();
 
+        // ✅ Create transaction for credit
+        await Transaction.create({
+            user: userId,
+            amount: Number(amount),
+            type: 'credit',
+            message: `Admin added ₹${amount} to wallet`
+        });
+
         return sendResponse(res, 200, true, 'Balance added successfully', wallet);
     } catch (err) {
         return sendResponse(res, 500, false, 'Error adding balance', err.message);
@@ -79,7 +88,8 @@ export const getAllOrders = async (req, res) => {
 };
 
 
-// ✅ Mark an order as delivered
+// ✅ Mark an order as delivered and create a transaction
+
 export const markOrderDelivered = async (req, res) => {
     try {
         const { orderId } = req.params;
@@ -111,13 +121,23 @@ export const markOrderDelivered = async (req, res) => {
             return sendResponse(res, 400, false, `Insufficient balance. ₹${tiffin.price} required, but you have ₹${wallet.balance}`);
         }
 
-        // ✅ Deduct only the amount of this single tiffin
+        // Deduct only the amount of this single tiffin
         wallet.balance -= tiffin.price;
         order.status = 'delivered';
 
-        await Promise.all([wallet.save(), order.save()]);
+        // Create transaction for deduction
+        await Promise.all([
+            wallet.save(),
+            order.save(),
+            Transaction.create({
+                user: order.user,
+                amount: tiffin.price,
+                type: 'deduct',
+                message: `Order #${order._id} delivered. Deducted ₹${tiffin.price} for tiffin.`
+            })
+        ]);
 
-        return sendResponse(res, 200, true, 'Order marked as delivered, wallet updated', order);
+        return sendResponse(res, 200, true, 'Order marked as delivered, wallet updated, transaction created', order);
     } catch (err) {
         return sendResponse(res, 500, false, 'Error delivering order', err.message);
     }
@@ -138,6 +158,14 @@ export const cancelOrder = async (req, res) => {
 
         order.status = 'cancelled';
         await order.save();
+
+        // Create a transaction with amount 0 for cancellation
+        await Transaction.create({
+            user: order.user,
+            amount: 0,
+            type: 'cancel',
+            message: `Order #${order._id} cancelled by admin.`
+        });
 
         return sendResponse(res, 200, true, 'Order cancelled successfully', order);
     } catch (err) {
