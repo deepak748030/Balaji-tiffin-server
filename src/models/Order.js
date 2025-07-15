@@ -23,7 +23,7 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'delivered', 'cancelled', 'paused'], // ✅ Added 'cancelled' status
+    enum: ['pending', 'delivered', 'cancelled', 'paused', 'in-transit'], // ✅ Added 'cancelled' status
     default: 'pending'
   },
   extraRoti: {

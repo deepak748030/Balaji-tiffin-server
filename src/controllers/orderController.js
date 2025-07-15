@@ -213,8 +213,7 @@ export const pauseOrder = async (req, res) => {
     const lastPending = await Order.findOne({
       user: userId,
       tiffinId: order.tiffinId,
-      slot: order.slot,
-      status: 'pending'
+      slot: order.slot
     }).sort({ deliveryDate: -1 });
 
     const newDate = new Date(lastPending ? lastPending.deliveryDate : new Date());
