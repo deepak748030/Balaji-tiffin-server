@@ -13,6 +13,7 @@ import tiffinRoutes from './routes/tiffinRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import pincodeRoutes from './routes/pincodeRoutes.js';
+import transactionRoutes from './routes/transactionRoutes.js';
 
 
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/api/tiffins', tiffinRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/pincodes', pincodeRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
