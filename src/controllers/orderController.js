@@ -237,16 +237,29 @@ export const pauseOrder = async (req, res) => {
 export const getOrdersByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
+    const { type } = req.query; // optional type filter: 'tiffin' or 'thali'
 
+    // ✅ Access control: only self or admin
     if (req.user.id !== userId && req.user.role !== 'admin') {
       return sendResponse(res, 403, false, 'Unauthorized');
     }
 
-    const orders = await Order.find({ user: userId })
+    // ✅ Build query
+    const query = { user: userId };
+
+    if (type === 'tiffin' || type === 'thali') {
+      // Get all tiffin IDs of the given type
+      const tiffins = await Tiffin.find({ type }).select('_id');
+      const tiffinIds = tiffins.map(t => t._id);
+      query.tiffin = { $in: tiffinIds };
+    }
+
+    // ✅ Fetch and populate orders
+    const orders = await Order.find(query)
       .populate('tiffin', 'name price type')
       .sort({ deliveryDate: 1 });
 
-    if (!orders || orders.length === 0) {
+    if (!orders.length) {
       return sendResponse(res, 404, false, 'No orders found');
     }
 
@@ -255,7 +268,6 @@ export const getOrdersByUserId = async (req, res) => {
     return sendResponse(res, 500, false, 'Error fetching orders', error.message);
   }
 };
-
 
 
 export const cancelOrder = async (req, res) => {

@@ -152,7 +152,6 @@ router.put('/:id/deliver', auth, deliverOrder);
  *         description: Order not found
  */
 router.put('/pause', auth, pauseOrder);
-
 /**
  * @swagger
  * /api/orders/user/{userId}:
@@ -168,38 +167,63 @@ router.put('/pause', auth, pauseOrder);
  *         schema:
  *           type: string
  *         description: ID of the user
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [tiffin, thali]
+ *         description: Optional filter by tiffin type
  *     responses:
  *       200:
  *         description: List of orders for the user
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   _id:
- *                     type: string
- *                   user:
- *                     type: string
- *                   tiffin:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Orders fetched successfully
+ *                 data:
+ *                   type: array
+ *                   items:
  *                     type: object
  *                     properties:
  *                       _id:
  *                         type: string
- *                       name:
+ *                       user:
  *                         type: string
- *                       price:
+ *                       tiffin:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           price:
+ *                             type: number
+ *                           type:
+ *                             type: string
+ *                             enum: [tiffin, thali]
+ *                       deliveryDate:
+ *                         type: string
+ *                         format: date
+ *                       slot:
+ *                         type: string
+ *                         enum: [morning, evening, both, null]
+ *                       status:
+ *                         type: string
+ *                         enum: [pending, delivered, cancelled, paused]
+ *                       extraRoti:
  *                         type: number
- *                   deliveryDate:
- *                     type: string
- *                     format: date
- *                   slot:
- *                     type: string
- *                   delivered:
- *                     type: boolean
- *                   paused:
- *                     type: boolean
+ *                       TotalPrice:
+ *                         type: number
+ *                       tiffinId:
+ *                         type: number
+ *                         nullable: true
  *       400:
  *         description: Invalid userId
  *       401:
@@ -209,6 +233,7 @@ router.put('/pause', auth, pauseOrder);
  *       404:
  *         description: No orders found for this user
  */
+
 router.get('/user/:userId', auth, getOrdersByUserId);
 
 

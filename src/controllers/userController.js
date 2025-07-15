@@ -60,9 +60,6 @@ export const getUserById = async (req, res) => {
 
     if (!userId) return sendResponse(res, 400, false, 'User ID is required');
 
-    if (req.user.id !== userId && req.user.role !== 'admin') {
-      return sendResponse(res, 403, false, 'Unauthorized');
-    }
 
     const user = await UserModel.findById(userId).select('-__v');
 
@@ -70,13 +67,16 @@ export const getUserById = async (req, res) => {
 
     return sendResponse(res, 200, true, 'User fetched successfully', {
       phone: user.phone,
-      name: user.fullName || '',
+      name: user.name || '',
       email: user.email || '',
       address: user.address || '',
       role: user.role,
       isVerified: user.isVerified,
       createdAt: user.createdAt,
-      updatedAt: user.updatedAt
+      updatedAt: user.updatedAt,
+      _id: user._id,
+      pincode: user.pincode || '',
+      isRegular: user.isRegular || false,
     });
   } catch (err) {
     return sendResponse(res, 500, false, 'Error fetching user', err.message);
