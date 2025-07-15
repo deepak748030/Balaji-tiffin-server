@@ -70,7 +70,6 @@ export const sendOtp = async (req, res) => {
   }
 };
 
-
 export const verifyOtp = async (req, res) => {
   try {
     const { phone, otp } = req.body;
@@ -92,14 +91,15 @@ export const verifyOtp = async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    // Prepare user data for response
     const userData = {
       _id: user._id,
       phone: user.phone,
       name: user.name || '',
       email: user.email || '',
       address: user.address || '',
+      pincode: user.pincode || '',
       role: user.role,
+      isRegular: user.isRegular,
       isVerified: user.isVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
