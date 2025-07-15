@@ -34,7 +34,9 @@ const orderSchema = new mongoose.Schema({
   TotalPrice: {
     type: Number,
     required: true
-  }
+  }, tiffinId: {
+    type: Number
+  },
 }, {
   timestamps: true
 });

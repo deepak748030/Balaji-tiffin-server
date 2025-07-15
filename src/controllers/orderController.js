@@ -10,7 +10,6 @@ import User from '../models/User.js';
 export const createOrder = async (req, res) => {
   try {
     const { tiffinId, days, slot, extraRoti = 0 } = req.body;
-    console.log(req.body)
     const userId = req.user.id;
 
     // ✅ Get user
@@ -45,6 +44,10 @@ export const createOrder = async (req, res) => {
     const orders = [];
     let estimatedOrderCount = 0;
 
+    // ✅ Get last order to calculate next tiffinId
+    const lastOrder = await Order.findOne({ user: userId }).sort({ tiffinId: -1 });
+    const newTiffinId = lastOrder?.tiffinId ? lastOrder.tiffinId + 1 : 1;
+
     if (tiffin.type === 'tiffin') {
       for (let i = 0; i < totalDays; i++) {
         const deliveryDate = new Date();
@@ -60,7 +63,8 @@ export const createOrder = async (req, res) => {
               deliveryDate,
               slot: 'morning',
               extraRoti: rotiCount,
-              TotalPrice: basePrice
+              TotalPrice: basePrice,
+              tiffinId: newTiffinId
             },
             {
               user: userId,
@@ -68,7 +72,8 @@ export const createOrder = async (req, res) => {
               deliveryDate,
               slot: 'evening',
               extraRoti: rotiCount,
-              TotalPrice: basePrice
+              TotalPrice: basePrice,
+              tiffinId: newTiffinId
             }
           );
         } else {
@@ -79,7 +84,8 @@ export const createOrder = async (req, res) => {
             deliveryDate,
             slot,
             extraRoti: rotiCount,
-            TotalPrice: basePrice
+            TotalPrice: basePrice,
+            tiffinId: newTiffinId
           });
         }
       }
@@ -93,7 +99,8 @@ export const createOrder = async (req, res) => {
         tiffin: tiffinId,
         deliveryDate: today,
         extraRoti: rotiCount,
-        TotalPrice: basePrice
+        TotalPrice: basePrice,
+        tiffinId: newTiffinId
       });
     }
 
@@ -113,11 +120,10 @@ export const createOrder = async (req, res) => {
     const createdOrders = await Order.insertMany(orders);
     return sendResponse(res, 201, true, 'Order(s) created successfully', createdOrders);
   } catch (error) {
+    console.error('Order Creation Error:', error);
     return sendResponse(res, 500, false, 'Error creating order(s)', error.message);
-    console.log(error)
   }
 };
-
 
 export const deliverOrder = async (req, res) => {
   try {
