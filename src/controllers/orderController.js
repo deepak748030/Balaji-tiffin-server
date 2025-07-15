@@ -35,7 +35,7 @@ export const createOrder = async (req, res) => {
     const wallet = await Wallet.findOne({ user: userId });
     if (!wallet) return sendResponse(res, 404, false, 'Wallet not found');
 
-    // ✅ Get admin setting for roti price
+    // ✅ Get admin settings (roti price)
     const settings = await AdminSettings.findOne();
     const rotiPrice = settings?.rotiPrice || 5;
 
@@ -44,9 +44,12 @@ export const createOrder = async (req, res) => {
     const orders = [];
     let estimatedOrderCount = 0;
 
-    // ✅ Get last order to calculate next tiffinId
-    const lastOrder = await Order.findOne({ user: userId }).sort({ tiffinId: -1 });
-    const newTiffinId = lastOrder?.tiffinId ? lastOrder.tiffinId + 1 : 1;
+    // ✅ For tiffin: generate global tiffinId
+    let globalTiffinId = null;
+    if (tiffin.type === 'tiffin') {
+      const lastOrder = await Order.findOne().sort({ tiffinId: -1 }); // GLOBAL
+      globalTiffinId = lastOrder?.tiffinId ? lastOrder.tiffinId + 1 : 1;
+    }
 
     if (tiffin.type === 'tiffin') {
       for (let i = 0; i < totalDays; i++) {
@@ -64,7 +67,7 @@ export const createOrder = async (req, res) => {
               slot: 'morning',
               extraRoti: rotiCount,
               TotalPrice: basePrice,
-              tiffinId: newTiffinId
+              tiffinId: globalTiffinId
             },
             {
               user: userId,
@@ -73,7 +76,7 @@ export const createOrder = async (req, res) => {
               slot: 'evening',
               extraRoti: rotiCount,
               TotalPrice: basePrice,
-              tiffinId: newTiffinId
+              tiffinId: globalTiffinId
             }
           );
         } else {
@@ -85,7 +88,7 @@ export const createOrder = async (req, res) => {
             slot,
             extraRoti: rotiCount,
             TotalPrice: basePrice,
-            tiffinId: newTiffinId
+            tiffinId: globalTiffinId
           });
         }
       }
@@ -94,20 +97,19 @@ export const createOrder = async (req, res) => {
       const today = new Date();
       const basePrice = tiffin.price + rotiCount * rotiPrice;
 
+      // No tiffinId for thali
       orders.push({
         user: userId,
         tiffin: tiffinId,
         deliveryDate: today,
         extraRoti: rotiCount,
-        TotalPrice: basePrice,
-        tiffinId: newTiffinId
+        TotalPrice: basePrice
       });
     }
 
-    const perOrderCost = tiffin.price + rotiCount * rotiPrice;
-    const totalCost = estimatedOrderCount * perOrderCost;
+    const totalCost = estimatedOrderCount * (tiffin.price + rotiCount * rotiPrice);
 
-    // ✅ Check wallet if user is not isRegular
+    // ✅ Check wallet balance (only for non-regular users)
     if (!user.isRegular && wallet.balance < totalCost) {
       return sendResponse(
         res,
@@ -117,6 +119,7 @@ export const createOrder = async (req, res) => {
       );
     }
 
+    // ✅ Save orders
     const createdOrders = await Order.insertMany(orders);
     return sendResponse(res, 201, true, 'Order(s) created successfully', createdOrders);
   } catch (error) {
