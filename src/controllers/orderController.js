@@ -10,6 +10,7 @@ import User from '../models/User.js';
 export const createOrder = async (req, res) => {
   try {
     const { tiffinId, days, slot, extraRoti = 0 } = req.body;
+    console.log(req.body)
     const userId = req.user.id;
 
     // ✅ Get user
@@ -113,6 +114,7 @@ export const createOrder = async (req, res) => {
     return sendResponse(res, 201, true, 'Order(s) created successfully', createdOrders);
   } catch (error) {
     return sendResponse(res, 500, false, 'Error creating order(s)', error.message);
+    console.log(error)
   }
 };
 
