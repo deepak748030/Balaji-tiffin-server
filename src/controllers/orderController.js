@@ -4,6 +4,7 @@ import Tiffin from '../models/Tiffin.js';
 import { sendResponse } from '../utils/sendResponse.js';
 import Transaction from '../models/Transaction.js';
 import AdminSettings from '../models/AdminSettings.js';
+import Pincode from '../models/Pincode.js';
 import User from '../models/User.js';
 
 export const createOrder = async (req, res) => {
@@ -11,28 +12,43 @@ export const createOrder = async (req, res) => {
     const { tiffinId, days, slot, extraRoti = 0 } = req.body;
     const userId = req.user.id;
 
-    const tiffin = await Tiffin.findById(tiffinId);
-    if (!tiffin) return sendResponse(res, 404, false, 'Tiffin not found');
-
+    // ✅ Get user
     const user = await User.findById(userId);
     if (!user) return sendResponse(res, 404, false, 'User not found');
 
+    // ✅ Check if pincode is available
+    if (!user.pincode) {
+      return sendResponse(res, 400, false, 'Pincode not set for user');
+    }
+
+    // ✅ Validate pincode delivery availability
+    const pincodeExists = await Pincode.findOne({ pincode: user.pincode });
+    if (!pincodeExists) {
+      return sendResponse(res, 400, false, 'Delivery not available in your area');
+    }
+
+    // ✅ Get tiffin
+    const tiffin = await Tiffin.findById(tiffinId);
+    if (!tiffin) return sendResponse(res, 404, false, 'Tiffin not found');
+
+    // ✅ Get wallet
     const wallet = await Wallet.findOne({ user: userId });
     if (!wallet) return sendResponse(res, 404, false, 'Wallet not found');
 
+    // ✅ Get admin setting for roti price
     const settings = await AdminSettings.findOne();
     const rotiPrice = settings?.rotiPrice || 5;
 
     const totalDays = Number(days || 1);
     const rotiCount = Number(extraRoti || 0);
     const orders = [];
-
     let estimatedOrderCount = 0;
 
     if (tiffin.type === 'tiffin') {
       for (let i = 0; i < totalDays; i++) {
         const deliveryDate = new Date();
         deliveryDate.setDate(deliveryDate.getDate() + i);
+        const basePrice = tiffin.price + rotiCount * rotiPrice;
 
         if (slot === 'both') {
           estimatedOrderCount += 2;
@@ -42,14 +58,16 @@ export const createOrder = async (req, res) => {
               tiffin: tiffinId,
               deliveryDate,
               slot: 'morning',
-              extraRoti: rotiCount
+              extraRoti: rotiCount,
+              TotalPrice: basePrice
             },
             {
               user: userId,
               tiffin: tiffinId,
               deliveryDate,
               slot: 'evening',
-              extraRoti: rotiCount
+              extraRoti: rotiCount,
+              TotalPrice: basePrice
             }
           );
         } else {
@@ -59,27 +77,36 @@ export const createOrder = async (req, res) => {
             tiffin: tiffinId,
             deliveryDate,
             slot,
-            extraRoti: rotiCount
+            extraRoti: rotiCount,
+            TotalPrice: basePrice
           });
         }
       }
     } else if (tiffin.type === 'thali') {
       estimatedOrderCount = 1;
       const today = new Date();
+      const basePrice = tiffin.price + rotiCount * rotiPrice;
+
       orders.push({
         user: userId,
         tiffin: tiffinId,
         deliveryDate: today,
-        extraRoti: rotiCount
+        extraRoti: rotiCount,
+        TotalPrice: basePrice
       });
     }
 
     const perOrderCost = tiffin.price + rotiCount * rotiPrice;
     const totalCost = estimatedOrderCount * perOrderCost;
 
-    // ✅ Allow isRegular users to skip balance check
+    // ✅ Check wallet if user is not isRegular
     if (!user.isRegular && wallet.balance < totalCost) {
-      return sendResponse(res, 400, false, `Insufficient wallet balance. Need ₹${totalCost}, but you have ₹${wallet.balance}`);
+      return sendResponse(
+        res,
+        400,
+        false,
+        `Insufficient wallet balance. Need ₹${totalCost}, but you have ₹${wallet.balance}`
+      );
     }
 
     const createdOrders = await Order.insertMany(orders);

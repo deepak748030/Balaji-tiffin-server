@@ -30,6 +30,10 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: 0, // ✅ Default to 0 if not added
     min: 0
+  },
+  TotalPrice: {
+    type: Number,
+    required: true
   }
 }, {
   timestamps: true
