@@ -25,6 +25,11 @@ const orderSchema = new mongoose.Schema({
     type: String,
     enum: ['pending', 'delivered', 'cancelled', 'paused'], // ✅ Added 'cancelled' status
     default: 'pending'
+  },
+  extraRoti: {
+    type: Number,
+    default: 0, // ✅ Default to 0 if not added
+    min: 0
   }
 }, {
   timestamps: true

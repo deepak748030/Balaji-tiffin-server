@@ -8,7 +8,9 @@ import {
     markOrderDelivered,
     cancelOrder,
     toggleIsRegular,
-    adminCreateUser
+    adminCreateUser,
+    updateRotiPrice,
+    getRotiPrice
 } from '../controllers/adminController.js';
 import { createPincode, deletePincode, listPincodes } from '../controllers/pincodeController.js';
 
@@ -36,5 +38,10 @@ router.patch('/users/:userId/toggle-regular', toggleIsRegular);
 router.post('/pincode/', createPincode);       // POST /api/pincodes
 router.get('/pincode/', listPincodes);               // GET  /api/pincodes
 router.delete('/pincode/:id', deletePincode);  // DELETE /api/pincodes/:id
+
+
+// 🔧 Roti price settings
+router.patch('/settings/roti-price', updateRotiPrice); // Update price
+router.get('/settings/roti-price', getRotiPrice);      // Get current price
 
 export default router;

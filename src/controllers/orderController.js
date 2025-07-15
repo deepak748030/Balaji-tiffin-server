@@ -3,11 +3,12 @@ import Wallet from '../models/Wallet.js';
 import Tiffin from '../models/Tiffin.js';
 import { sendResponse } from '../utils/sendResponse.js';
 import Transaction from '../models/Transaction.js';
+import AdminSettings from '../models/AdminSettings.js';
 import User from '../models/User.js';
 
 export const createOrder = async (req, res) => {
   try {
-    const { tiffinId, days, slot } = req.body;
+    const { tiffinId, days, slot, extraRoti = 0 } = req.body;
     const userId = req.user.id;
 
     const tiffin = await Tiffin.findById(tiffinId);
@@ -19,8 +20,13 @@ export const createOrder = async (req, res) => {
     const wallet = await Wallet.findOne({ user: userId });
     if (!wallet) return sendResponse(res, 404, false, 'Wallet not found');
 
+    const settings = await AdminSettings.findOne();
+    const rotiPrice = settings?.rotiPrice || 5;
+
     const totalDays = Number(days || 1);
+    const rotiCount = Number(extraRoti || 0);
     const orders = [];
+
     let estimatedOrderCount = 0;
 
     if (tiffin.type === 'tiffin') {
@@ -31,12 +37,30 @@ export const createOrder = async (req, res) => {
         if (slot === 'both') {
           estimatedOrderCount += 2;
           orders.push(
-            { user: userId, tiffin: tiffinId, deliveryDate, slot: 'morning' },
-            { user: userId, tiffin: tiffinId, deliveryDate, slot: 'evening' }
+            {
+              user: userId,
+              tiffin: tiffinId,
+              deliveryDate,
+              slot: 'morning',
+              extraRoti: rotiCount
+            },
+            {
+              user: userId,
+              tiffin: tiffinId,
+              deliveryDate,
+              slot: 'evening',
+              extraRoti: rotiCount
+            }
           );
         } else {
           estimatedOrderCount += 1;
-          orders.push({ user: userId, tiffin: tiffinId, deliveryDate, slot });
+          orders.push({
+            user: userId,
+            tiffin: tiffinId,
+            deliveryDate,
+            slot,
+            extraRoti: rotiCount
+          });
         }
       }
     } else if (tiffin.type === 'thali') {
@@ -45,11 +69,13 @@ export const createOrder = async (req, res) => {
       orders.push({
         user: userId,
         tiffin: tiffinId,
-        deliveryDate: today
+        deliveryDate: today,
+        extraRoti: rotiCount
       });
     }
 
-    const totalCost = estimatedOrderCount * tiffin.price;
+    const perOrderCost = tiffin.price + rotiCount * rotiPrice;
+    const totalCost = estimatedOrderCount * perOrderCost;
 
     // ✅ Allow isRegular users to skip balance check
     if (!user.isRegular && wallet.balance < totalCost) {
@@ -62,8 +88,6 @@ export const createOrder = async (req, res) => {
     return sendResponse(res, 500, false, 'Error creating order(s)', error.message);
   }
 };
-
-
 
 
 export const deliverOrder = async (req, res) => {

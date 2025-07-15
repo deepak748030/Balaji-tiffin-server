@@ -3,6 +3,7 @@ import Wallet from '../models/Wallet.js';
 import Order from '../models/Order.js';
 import Tiffin from '../models/Tiffin.js';
 import { sendResponse } from '../utils/sendResponse.js';
+import AdminSettings from '../models/AdminSettings.js';
 
 export const getAllUsers = async (req, res) => {
     try {
@@ -191,5 +192,37 @@ export const toggleIsRegular = async (req, res) => {
         return sendResponse(res, 200, true, `User isRegular updated to ${user.isRegular}`, user);
     } catch (err) {
         return sendResponse(res, 500, false, 'Error toggling isRegular', err.message);
+    }
+};
+
+export const updateRotiPrice = async (req, res) => {
+    try {
+        const { rotiPrice } = req.body;
+
+        if (typeof rotiPrice !== 'number' || rotiPrice < 0) {
+            return sendResponse(res, 400, false, 'Invalid roti price');
+        }
+
+        const settings = await AdminSettings.findOneAndUpdate(
+            {},
+            { rotiPrice },
+            { upsert: true, new: true }
+        );
+
+        return sendResponse(res, 200, true, 'Roti price updated', settings);
+    } catch (err) {
+        return sendResponse(res, 500, false, 'Error updating roti price', err.message);
+    }
+};
+
+// GET /api/admin/settings/roti-price
+export const getRotiPrice = async (req, res) => {
+    try {
+        const settings = await AdminSettings.findOne();
+        const rotiPrice = settings?.rotiPrice ?? 0;
+
+        return sendResponse(res, 200, true, 'Roti price fetched', { rotiPrice });
+    } catch (err) {
+        return sendResponse(res, 500, false, 'Error fetching roti price', err.message);
     }
 };
