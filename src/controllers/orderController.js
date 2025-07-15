@@ -182,52 +182,63 @@ export const pauseOrder = async (req, res) => {
   try {
     const { userId, orderId } = req.body;
 
-    // Allow pause if requester is the user or an admin
+    // Only the user or an admin can pause the order
     if (req.user.id !== userId && req.user.role !== 'admin') {
       return sendResponse(res, 403, false, 'Unauthorized');
     }
 
-    // Find the order by its id and the owner
-    const order = await Order.findOne({ _id: orderId, user: userId });
+    const order = await Order.findOne({ _id: orderId, user: userId }).populate('tiffin');
     if (!order) {
       return sendResponse(res, 404, false, 'Order not found');
     }
 
-    // Cannot pause an order that is delivered or cancelled
-    if (order.status === 'delivered' || order.status === 'cancelled') {
+    // ✅ Only tiffin-type orders can be paused
+    if (!order.tiffin || order.tiffin.type !== 'tiffin') {
+      return sendResponse(res, 400, false, 'Only tiffin orders can be paused');
+    }
+
+    if (['delivered', 'cancelled'].includes(order.status)) {
       return sendResponse(res, 400, false, 'Cannot pause a delivered or cancelled order');
     }
 
-    // If order is already paused, simply return a message
     if (order.status === 'paused') {
       return sendResponse(res, 200, true, 'Order already paused');
     }
 
-    // Mark the current order as paused
+    // ✅ Mark the current order as paused
     order.status = 'paused';
     await order.save();
 
-    // Find the last pending order for the same tiffin and slot (if any)
-    const lastPendingOrder = await Order.findOne({
+    // ✅ Find last pending order with same tiffinId and slot
+    const lastPending = await Order.findOne({
       user: userId,
-      tiffin: order.tiffin,
+      tiffinId: order.tiffinId,
       slot: order.slot,
       status: 'pending'
     }).sort({ deliveryDate: -1 });
 
-    // Determine the new delivery date (extend by 1 day from the last order, or use today if not found)
-    const newDate = new Date(lastPendingOrder ? lastPendingOrder.deliveryDate : new Date());
+    const newDate = new Date(lastPending ? lastPending.deliveryDate : new Date());
     newDate.setDate(newDate.getDate() + 1);
 
-    // Create a new order for the extended day (status defaults to 'pending')
+    // ✅ Find Tiffin again by tiffinId (in case populate was skipped or needed fresh)
+    const tiffinDoc = await Tiffin.findOne({ _id: order.tiffin });
+
+    if (!tiffinDoc) {
+      return sendResponse(res, 404, false, 'Tiffin not found');
+    }
+
     const newOrder = await Order.create({
       user: userId,
-      tiffin: order.tiffin,
+      tiffin: tiffinDoc._id,
+      tiffinId: order.tiffinId,
       deliveryDate: newDate,
-      slot: order.slot
+      slot: order.slot,
+      extraRoti: order.extraRoti,
+      TotalPrice: order.TotalPrice
     });
+    // console.log(newOrder)
+    return sendResponse(res, 200, true, 'Order paused. Extra day added.', newOrder);
 
-    return sendResponse(res, 200, true, 'Order paused. Extra day added', newOrder);
   } catch (error) {
     return sendResponse(res, 500, false, 'Error pausing order', error.message);
   }
